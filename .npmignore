@@ -1,6 +1,31 @@
+# Source & build configs
 src/
-node_modules/
 tsconfig.json
+tsup.config.ts
 vitest.config.ts
+commands.js
+
+# Dev environment & tools
 .eslintrc.js
 .prettierrc
+.env
+.env.local
+.env.development
+.vscode/
+.idea/
+
+# Dependency folders
+node_modules/
+dist/**/*.map
+
+# Test & coverage
+__tests__/
+test/
+coverage/
+*.test.ts
+*.spec.ts
+
+# Misc
+*.log
+.DS_Store
+Thumbs.db

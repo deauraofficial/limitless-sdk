@@ -1,7 +1,13 @@
 {
-  "name": "goldc-sdk",
+  "name": "@deaura/limitless-sdk",
   "version": "1.0.0",
-  "description": "JavaScript SDK for GoldC integration",
+  "description": "Official JavaScript & TypeScript SDK for the Limitless ecosystem — enabling token creation, liquidity management, and Solana on-chain interactions with ease.",
+  "files": [
+    "dist/",
+    "README.md",
+    "LICENSE",
+    "dist/index.d.ts"
+  ],
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -17,17 +23,32 @@
     "test": "vitest"
   },
   "keywords": [
-    "goldc",
+    "@deaura/limitless-sdk",
+    "deaura",
+    "limitless",
     "sdk",
     "blockchain"
   ],
   "author": "deaura",
   "license": "ISC",
   "devDependencies": {
+    "@types/bn.js": "^5.2.0",
     "eslint": "^9.32.0",
     "prettier": "^3.6.2",
     "tsup": "^8.5.0",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.1",
+    "@orca-so/common-sdk": "^0.3.5",
+    "@orca-so/whirlpools": "^4.0.0",
+    "@orca-so/whirlpools-core": "^2.0.0",
+    "@orca-so/whirlpools-sdk": "^0.11.8",
+    "@solana/kit": "^2.3.0",
+    "@solana/spl-token": "^0.4.13",
+    "@solana/web3.js": "^1.98.4",
+    "bn.js": "^5.2.2",
+    "cross-fetch": "^4.1.0"
   }
 }
