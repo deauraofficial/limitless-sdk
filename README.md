@@ -269,7 +269,7 @@ try {
 
 - **Documentation**: [deaura.io/docs/limitless-sdk](https://deaura.io/docs/limitless-sdk)
 - **Discord**: [Join our community](https://discord.com/invite/7bfDtQxYDK)
-- **Twitter**: [@LimitlessLabs](https://x.com/DeAuraio)
+- **Twitter**: [@deauraio](https://x.com/DeAuraio)
 
 ---
 
