@@ -1,40 +1,39 @@
-# 🚀 Limitless SDK
-
+# Limitless SDK
 
 > The official **JavaScript & TypeScript SDK** for integrating with the **Limitless** ecosystem — enabling token creation, liquidity management, and Solana-based on-chain operations with minimal setup.
 
 ---
 
-## ✨ Overview
+## Overview
 
 The **Limitless SDK** provides developers with simple, type-safe methods to interact with the Limitless blockchain ecosystem.
 
 **Key Features:**
-- 🔐 Secure API authentication
-- 🪙 Token creation and liquidity launch via Orca Whirlpool
-- 💰 SOL balance queries and transfers
-- 📊 Real-time progress tracking with callbacks
-- 🎯 Built-in validation for all parameters
-- ⚡ Compatible with Custom RPC, Solana RPC, or custom endpoints
+- Secure API authentication
+- Token creation and liquidity launch via Orca Whirlpool
+- SOL balance queries and transfers
+- Real-time progress tracking with callbacks
+- Built-in validation for all parameters
+- Compatible with Custom RPC, Solana RPC, or custom endpoints
 
 Built for modern frameworks like **React**, **Next.js**, and **Node.js**, it simplifies complex on-chain logic into developer-friendly APIs.
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
-- [Installation](#-installation)
-- [Quick Start](#-quick-start)
-- [API Authentication](#-api-authentication)
-- [Core Functions](#-core-functions)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [API Authentication](#api-authentication)
+- [Core Functions](#core-functions)
   - [Initialize SDK](#initialize-sdk)
   - [Launch Token](#launch-token)
-- [Requirements](#-requirements)
-- [Support](#-support)
+- [Requirements](#requirements)
+- [Support](#support)
 
 ---
 
-## 📦 Installation
+## Installation
 
 Install the SDK via npm:
 
@@ -43,13 +42,13 @@ npm install @deaura/limitless-sdk
 ```
 
 The SDK is fully compatible with:
-- 🧩 **React / Next.js / Node.js** environments
-- ⚙️ **TypeScript** & modern bundlers (Vite, Webpack)
-- 💼 **Solana wallet adapters** (Phantom, Solflare, Backpack, etc.)
+- **React / Next.js / Node.js** environments
+- **TypeScript** & modern bundlers (Vite, Webpack)
+- **Solana wallet adapters** (Phantom, Solflare, Backpack, etc.)
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ```javascript
 import { initSdk, launchToken } from '@deaura/limitless-sdk';
@@ -76,7 +75,7 @@ const result = await launchToken({
 
 ---
 
-## 🔐 API Authentication
+## API Authentication
 
 Every SDK call must be authenticated using a valid **Limitless API key**.
 
@@ -99,17 +98,17 @@ React.useEffect(() => {
 
   if (apiKey) {
     initSdk({ authToken: apiKey })
-      .then((res) => console.log('✅ SDK initialized:', res))
-      .catch((err) => console.error('❌ SDK init failed:', err));
+      .then((res) => console.log('SDK initialized:', res))
+      .catch((err) => console.error('SDK init failed:', err));
   }
 }, []);
 ```
 
-> 🔐 **Security Note:** The authentication process ensures that all token operations are securely linked to your verified developer identity. Never commit API keys to version control.
+> **Security Note:** The authentication process ensures that all token operations are securely linked to your verified developer identity. Never commit API keys to version control.
 
 ---
 
-## 🛠️ Core Functions
+## Core Functions
 
 ### Initialize SDK
 
@@ -123,9 +122,9 @@ const initialize = async () => {
     const response = await initSdk({ 
       authToken: "limitless_live_your_api_key_here" 
     });
-    console.log('✅ SDK initialized:', response);
+    console.log('SDK initialized:', response);
   } catch (error) {
-    console.error('❌ SDK init failed:', error);
+    console.error('SDK init failed:', error);
   }
 };
 ```
@@ -144,35 +143,35 @@ const LaunchTokenExample = () => {
   const handleLaunchToken = async () => {
     try {
       if (!wallet?.publicKey) {
-        console.error("❌ Please connect your wallet before launching a token.");
+        console.error("Please connect your wallet before launching a token.");
         return;
       }
 
       const params = {
         rpcurl: "https://devnet.helius-rpc.com/?api-key=your_helius_key",
-        wallet, // ✅ The connected wallet adapter
+        wallet, // The connected wallet adapter
         metadata: {
           name: "Limitless Token",
           symbol: "LMT",
           uri: "https://example.com/metadata.json", // Must be valid metadata JSON URI
         },
-        tokenSupply: 1_000_000, // ✅ Total supply of the token
-        liquidityAmount: 500,   // ✅ ORO tokens used as liquidity
-        tickSpacing: 128,       // ✅ Whirlpool tick spacing
+        tokenSupply: 1_000_000, // Total supply of the token
+        liquidityAmount: 500,   // ORO tokens used as liquidity
+        tickSpacing: 128,       // Whirlpool tick spacing
         feeTierAddress: "G319n1BPjeXjAfheDxYe8KWZM7FQhQCJerWRK2nZYtiJ", // Example fee tier (ORCA fee tiers)
-        onStep: (status) => console.log("🪄 Step:", status), // Optional callback for progress updates
+        onStep: (status) => console.log("Step:", status), // Optional callback for progress updates
       };
 
       const response = await launchToken(params);
 
       if (!response.success) {
-        console.error("❌ Launch failed:", response.error);
+        console.error("Launch failed:", response.error);
         return;
       }
 
-      console.log("✅ Token launched successfully:", response.data);
+      console.log("Token launched successfully:", response.data);
     } catch (error) {
-      console.error("🔥 Unexpected error launching token:", error);
+      console.error("Unexpected error launching token:", error);
     }
   };
 
@@ -190,23 +189,23 @@ export default LaunchTokenExample;
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `rpcurl` | `string` | ✅ | Solana RPC endpoint URL (Helius, Solana RPC, or custom) |
-| `wallet` | `WalletAdapter` | ✅ | Connected Solana wallet adapter instance |
-| `metadata` | `object` | ✅ | Token metadata (name, symbol, uri) |
-| `metadata.name` | `string` | ✅ | Token name |
-| `metadata.symbol` | `string` | ✅ | Token symbol (ticker) |
-| `metadata.uri` | `string` | ✅ | Valid metadata JSON URI |
-| `tokenSupply` | `number` | ✅ | Total token supply |
-| `liquidityAmount` | `number` | ✅ | ORO tokens used as liquidity |
-| `tickSpacing` | `number` | ✅ | Whirlpool tick spacing (64, 128, or 256) |
-| `feeTierAddress` | `string` | ✅ | Orca fee tier address |
-| `onStep` | `function` | ❌ | Optional callback for progress updates |
+| `rpcurl` | `string` | Yes | Solana RPC endpoint URL (Helius, Solana RPC, or custom) |
+| `wallet` | `WalletAdapter` | Yes | Connected Solana wallet adapter instance |
+| `metadata` | `object` | Yes | Token metadata (name, symbol, uri) |
+| `metadata.name` | `string` | Yes | Token name |
+| `metadata.symbol` | `string` | Yes | Token symbol (ticker) |
+| `metadata.uri` | `string` | Yes | Valid metadata JSON URI |
+| `tokenSupply` | `number` | Yes | Total token supply |
+| `liquidityAmount` | `number` | Yes | ORO tokens used as liquidity |
+| `tickSpacing` | `number` | Yes | Whirlpool tick spacing (64, 128, or 256) |
+| `feeTierAddress` | `string` | Yes | Orca fee tier address |
+| `onStep` | `function` | No | Optional callback for progress updates |
 
 ---
 
 ---
 
-## 📋 Requirements
+## Requirements
 
 - **Node.js**: >= 16.x
 - **React** (optional): >= 17.x
@@ -215,7 +214,7 @@ export default LaunchTokenExample;
 
 ---
 
-## 📚 Advanced Usage
+## Advanced Usage
 
 ### Progress Tracking
 
@@ -265,7 +264,7 @@ try {
 
 ---
 
-## 🤝 Support
+## Support
 
 - **Documentation**: [deaura.io/docs/limitless-sdk](https://deaura.io/docs/limitless-sdk)
 - **Discord**: [Join our community](https://discord.com/invite/7bfDtQxYDK)

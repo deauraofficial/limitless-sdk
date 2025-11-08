@@ -1,7 +1,8 @@
+import { withAuth } from "../auth/withAuth";
 import { runLaunchFlow } from "./contract/token";
 import { LaunchTokenParams } from "./types";
 
-export const launchToken = async ({
+const _launchToken = async ({
   rpcurl,
   wallet,
   metadata,
@@ -37,3 +38,5 @@ export const launchToken = async ({
     return { success: false, error: error.message || error };
   }
 };
+
+export const launchToken = withAuth(_launchToken);

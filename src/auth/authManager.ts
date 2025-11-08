@@ -35,7 +35,7 @@ export const initSdk = async ({ authToken }: { authToken: string }) => {
 
     _user = await res.json();
 
-    //? set token on frontend
+    // ✅ Optionally persist token on frontend
     // if (typeof window !== "undefined") {
     //   localStorage.setItem(TOKEN_KEY, authToken);
     // }
@@ -45,7 +45,7 @@ export const initSdk = async ({ authToken }: { authToken: string }) => {
     _authToken = null;
     _user = null;
 
-    //? remvoe token fron frontend
+    // ✅ Optionally clear stored token
     // if (typeof window !== "undefined") {
     //   localStorage.removeItem(TOKEN_KEY);
     // }
@@ -90,18 +90,41 @@ export const logoutSdk = (): void => {
   }
 };
 
+/**
+ * ✅ Ensures the SDK token is valid.
+ * Makes a POST request with { apiKey } in body as expected by backend.
+ */
 export const ensureValidToken = async (): Promise<void> => {
   if (!_authToken) throw new Error("❌ SDK not initialized.");
 
   try {
     const res = await crossFetch(VALIDATE_TOKEN_URL, {
       method: "POST",
-      headers: { Authorization: _authToken },
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "*/*",
+        Authorization: _authToken, // optional, for compatibility
+      },
+      body: JSON.stringify({ apiKey: _authToken }), // ✅ backend expects this
     });
 
-    if (!res.ok) throw new Error("Token expired");
+    if (!res.ok) {
+      console.error("❌ Token validation failed:", res.status);
+      logoutSdk();
+      throw new Error("❌ Token expired or invalid. Please reauthenticate.");
+    }
+
+    const data = await res.json().catch(() => null);
+    if (data && data.success === false) {
+      logoutSdk();
+      throw new Error("❌ Invalid API key.");
+    }
+
+    // ✅ Token is valid, continue
+    return;
   } catch (err) {
     logoutSdk();
+    console.error("❌ Token validation error:", err);
     throw new Error("❌ Token expired or invalid. Please reauthenticate.");
   }
 };

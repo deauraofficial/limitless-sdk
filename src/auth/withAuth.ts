@@ -1,16 +1,21 @@
 import { ensureValidToken, getAuthToken } from "./authManager";
 
 /**
- * High-order function to wrap SDK methods that require authentication.
- * Example:
- *   export const transferSol = withAuth(_transferSol);
+ * Wraps SDK methods that require authentication.
+ * Works with both (token, ...args) and (...args) function signatures.
  */
-export function withAuth<T extends any[], R>(
-  fn: (token: string, ...args: T) => Promise<R>
-): (...args: T) => Promise<R> {
-  return async (...args: T): Promise<R> => {
+export function withAuth<T extends (...args: any[]) => Promise<any>>(fn: T) {
+  return async (...args: Parameters<T>): Promise<Awaited<ReturnType<T>>> => {
     const token = getAuthToken();
     await ensureValidToken();
-    return fn(token, ...args);
+
+    // If the wrapped function expects a token, inject it
+    if (fn.length > args.length) {
+      // @ts-ignore — safe runtime injection
+      return fn(token, ...args);
+    }
+
+    // Otherwise, just call it normally
+    return fn(...args);
   };
 }
