@@ -1,6 +1,6 @@
 {
   "name": "@deaura/limitless-sdk",
-  "version": "1.0.2",
+  "version": "1.0.4",
   "description": "Official JavaScript & TypeScript SDK for the Limitless ecosystem — enabling token creation, liquidity management, and Solana on-chain interactions with ease.",
   "files": [
     "dist/",

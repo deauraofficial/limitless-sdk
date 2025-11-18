@@ -59,7 +59,7 @@ await initSdk({ authToken: "limitless_live_your_api_key_here" });
 
 // 2. Launch a token with liquidity
 const result = await launchToken({
-  rpcurl: "https://devnet.helius-rpc.com/?api-key=your_helius_key",
+  rpcurl: process.env.NEXT_PUBLIC_RPC_MAINNET  || "https://api.mainnet-beta.solana.com",
   wallet: connectedWallet,
   metadata: {
     name: "My Token",
@@ -148,7 +148,7 @@ const LaunchTokenExample = () => {
       }
 
       const params = {
-        rpcurl: "https://devnet.helius-rpc.com/?api-key=your_helius_key",
+        rpcurl: process.env.NEXT_PUBLIC_RPC_MAINNET  || "https://api.mainnet-beta.solana.com",
         wallet, // The connected wallet adapter
         metadata: {
           name: "Limitless Token",
@@ -234,13 +234,7 @@ await launchToken({
 
 The SDK supports any Solana RPC provider:
 
-```javascript
-// Helius
-rpcurl: "https://mainnet.helius-rpc.com/?api-key=YOUR_KEY"
-
-// QuickNode
-rpcurl: "https://YOUR_ENDPOINT.quiknode.pro/YOUR_TOKEN/"
-
+```javascript 
 // Solana Public RPC
 rpcurl: "https://api.mainnet-beta.solana.com"
 ```
