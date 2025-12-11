@@ -1,4 +1,4 @@
-export const GOLDC_TOKEN_MINT = "75Q4sb6VtoZcnAaEiykLSZ1pPwhDr3GnUn9VTwEnrXqv";
+export const GOLDC_TOKEN_MINT = "2MwxMWon2z4RxAq98pt9uNxLpWCDY2QCeeqtUS4JWHC7";
 export const VNX_TOKEN_MINT = "9TPL8droGJ7jThsq4momaoz6uhTcvX2SeMqipoPmNa8R";
 
 export const ORCA_WHIRLPOOL_PROGRAM_ID =
@@ -19,4 +19,4 @@ export const ASSOCIATED_TOKEN_PROGRAM_ID =
   "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL";
 
 export const PROGRAM_ID_CONTRACT =
-  "HZCtQt5eJDuaiWakuM1KVGfmefsyxjLvmxVaXmp9Hnny";
+  "DDZZWyq9ur4iszNCREty7f2PZBceVNA2vpPXtCnH3kob";

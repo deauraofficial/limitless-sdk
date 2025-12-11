@@ -1,22 +1,37 @@
 import { withAuth } from "../auth/withAuth";
 import { runLaunchFlow } from "./contract/token";
-import { LaunchTokenParams } from "./types";
+import { LaunchTokenParams, SDKResponse } from "./types";
 
-const _launchToken = async ({
-  rpcurl,
-  wallet,
-  metadata,
-  tokenSupply,
-  liquidityAmount,
-  tickSpacing,
-  feeTierAddress,
-  onStep,
-}: LaunchTokenParams) => {
+const _launchToken = async (
+  params: LaunchTokenParams
+): Promise<SDKResponse> => {
+  const {
+    rpcurl,
+    wallet,
+    metadata,
+    tokenSupply,
+    liquidityAmount,
+    onStep,
+    tickSpacing,
+    feeTierAddress,
+    integratorAccount,
+    salesRepAccount,
+  } = params;
+
+  if (!wallet) {
+    return { success: false, error: "Wallet is required" };
+  }
+  if (!rpcurl) {
+    return { success: false, error: "RPC URL is required" };
+  }
+  if (!metadata?.name || !metadata?.symbol || !metadata?.uri) {
+    return {
+      success: false,
+      error: "Metadata (name, symbol, uri) is required",
+    };
+  }
+
   try {
-    if (!wallet) throw new Error("Wallet is required");
-    if (!metadata?.name || !metadata?.symbol || !metadata?.uri)
-      throw new Error("Metadata (name, symbol, uri) is required");
-
     const result = await runLaunchFlow(
       rpcurl,
       wallet,
@@ -25,17 +40,15 @@ const _launchToken = async ({
       liquidityAmount,
       onStep || (() => {}),
       tickSpacing,
-      feeTierAddress
+      feeTierAddress,
+      integratorAccount,
+      salesRepAccount
     );
 
-    if (result?.error) {
-      return { success: false, error: result.error };
-    }
-
-    return { success: true, data: result };
+    return result;
   } catch (error: any) {
     console.error("❌ launchToken failed:", error);
-    return { success: false, error: error.message || error };
+    return { success: false, error: error.message || "Unknown error occurred" };
   }
 };
 

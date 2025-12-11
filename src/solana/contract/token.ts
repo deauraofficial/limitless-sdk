@@ -17,14 +17,8 @@ import {
   ORCA_WHIRLPOOL_PROGRAM_ID,
   TOKEN_METADATA_PROGRAM_ID,
 } from "../constants";
-import { getLaunchConfigs } from "./helpers";
+import { getLaunchConfigs, getTicksConfigs } from "./helpers";
 import Decimal from "decimal.js";
-
-interface Metadata {
-  name: string;
-  symbol: string;
-  uri: string;
-}
 
 export const runLaunchFlow = async (
   rpcurl: string,
@@ -34,7 +28,9 @@ export const runLaunchFlow = async (
   liquidityAmount: number,
   setStep: (state: string) => void,
   tickSpacing: number,
-  feeTierAddress: string
+  feeTierAddress: string,
+  integratorAccount: string | null,
+  salesRepAccount: string | null
 ) => {
   const results: any = {};
 
@@ -77,44 +73,70 @@ export const runLaunchFlow = async (
   }
 
   try {
+    //  Get Launch Configs
     const configs = await getLaunchConfigs(
       rpcurl,
       wallet,
-      liquidityAmount,
-      tokenSupply,
+      liquidityAmount, // tokenAmountB
+      tokenSupply, // tokenAmountA
       tickSpacing,
       feeTierAddress
     );
     results.configs = configs;
-    // 🔹 2. Graduate Token
+
+    //  Graduate Token
     setStep("Minting Token...");
-    // return results
     const grad = await graduateToken(
       wallet,
       metadata,
       configs,
-      tokenSupply,
-      liquidityAmount
+      integratorAccount,
+      salesRepAccount
     );
     results.graduateToken = grad;
+
     if (grad.error) {
       results.error = grad.error;
       return results;
     }
-    // 🔹 3. Add Liquidity
-    setStep("Adding Liquidity...");
-    const addLiq = await addLiquidity(
-      wallet,
+
+    //  Initialize Tick Arrays
+    setStep("Setting up Ticks...");
+    const tickConfig = await getTicksConfigs(
       configs,
-      tokenSupply, // tokenAmountA
-      liquidityAmount // tokenAmountB
+      configs.whirlpool,
+      wallet,
+      tickSpacing
     );
+    results.tickConfig = tickConfig;
+
+    if (tickConfig.error) {
+      results.error = tickConfig.error;
+      return results;
+    }
+
+    // Add Liquidity
+    setStep("Adding Liquidity...");
+    const addLiq = await addLiquidity(wallet, configs, tickConfig);
     results.addLiquidity = addLiq;
+
     if (addLiq.error) {
       results.error = addLiq.error;
       return results;
     }
-    return results;
+
+    return {
+      success: true,
+      data: {
+        tokenMint: configs?.tokenMintB?.publicKey?.toBase58(),
+        poolAddress: configs?.whirlpool?.toBase58(),
+        transactions: {
+          launch: grad.signature,
+          tickConfig: tickConfig.signature || null,
+          liquidity: addLiq.signature,
+        },
+      },
+    };
   } catch (err: any) {
     console.error("❌ runLaunchFlow failed:", err);
     results.error = err;
@@ -124,10 +146,10 @@ export const runLaunchFlow = async (
 
 export const graduateToken = async (
   wallet: any,
-  metadata: Metadata,
+  metadata: any,
   configs: any,
-  tokenAmount0: number, // token supply
-  tokenAmount1: number // liquidity amount
+  integratorAccount: string | null,
+  salesRepAccount: string | null
 ) => {
   if (!wallet.publicKey || !wallet.signTransaction) {
     throw new Error("Wallet not connected or cannot sign");
@@ -156,30 +178,44 @@ export const graduateToken = async (
     START_TA_UPPER: startTickIndexUpper,
     tickLowerIndex,
     tickUpperIndex,
+    tokenAmount0U64,
+    tokenAmount1U64,
   } = configs;
 
-  // Use the provided sqrt price directly
+  // Sqrt price from configs
   const sqrtPrice = new BN(INITIAL_SQRT_PRICE.toString());
 
-  // Compute budget ix
+  // Optional accounts
+  const INTEGRATOR_ACCOUNT = integratorAccount
+    ? new PublicKey(integratorAccount)
+    : null;
+
+  const SALES_REP_ACCOUNT = salesRepAccount
+    ? new PublicKey(salesRepAccount)
+    : null;
+
+  // Compute budget
   const computeUnitsIx = ComputeBudgetProgram.setComputeUnitLimit({
     units: 1_400_000,
   });
 
-  // Build instruction
   const ixBuilder = program.methods
     .launchToken(
       TICK_SPACING,
       sqrtPrice,
-      startTickIndexLower,
-      startTickIndexUpper,
-      tickLowerIndex,
-      tickUpperIndex,
+      // startTickIndexLower,
+      // startTickIndexUpper,
+      // tickLowerIndex,
+      // tickUpperIndex,
       metadata.name,
       metadata.symbol,
       metadata.uri,
-      new BN(tokenAmount0),
-      new BN(tokenAmount1)
+      // new BN(tokenAmount0),
+      // new BN(tokenAmount1),
+      new BN(tokenAmount0U64),
+      new BN(tokenAmount1U64),
+      INTEGRATOR_ACCOUNT,
+      SALES_REP_ACCOUNT
     )
     .accountsPartial({
       launchTokenStore: launchtokenStore,
@@ -196,44 +232,42 @@ export const graduateToken = async (
       tokenVaultA: tokenVaultA.publicKey,
       tokenVaultB: tokenVaultB.publicKey,
       feeTier: FEE_TIER_PUBKEY,
-      tickArrayLower,
-      tickArrayUpper,
+      // tickArrayLower,
+      // tickArrayUpper,
       tokenProgram: TOKEN_PROGRAM_ID,
       tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
       systemProgram: SystemProgram.programId,
       rent: anchor.web3.SYSVAR_RENT_PUBKEY,
     });
 
-  // Transaction
-  let tx = await ixBuilder.transaction();
+  // Build transaction
+  const tx = await ixBuilder.transaction();
   tx.instructions.unshift(computeUnitsIx);
   tx.feePayer = wallet.publicKey;
 
   try {
     const { blockhash, lastValidBlockHeight } =
       await provider.connection.getLatestBlockhash("confirmed");
+
     tx.recentBlockhash = blockhash;
 
-    // Partial sign with init accounts
+    // partial sign mint + vaults
     tx.partialSign(tokenMintB, tokenVaultA, tokenVaultB);
 
-    // Send via Phantom (signs fee payer)
-    const sig = await wallet.sendTransaction(tx, provider.connection, {
+    const signature = await wallet.sendTransaction(tx, provider.connection, {
       skipPreflight: false,
       preflightCommitment: "confirmed",
     });
 
     await provider.connection.confirmTransaction(
-      { signature: sig, blockhash, lastValidBlockHeight },
+      { signature, blockhash, lastValidBlockHeight },
       "confirmed"
     );
 
-    // console.log("✅ launchToken tx:", sig);
-
-    return { signature: sig, configs, error: null };
+    return { signature, configs, error: null };
   } catch (e: any) {
     const logs: string[] | undefined = e?.logs ?? e?.getLogs?.();
-    console.error("❌ SendTransactionError:", e?.message || e);
+    console.error("❌ graduateToken failed:", e?.message || e);
     if (logs) console.error("Program Logs:\n" + logs.join("\n"));
     return { signature: null, configs, error: e };
   }
@@ -242,8 +276,7 @@ export const graduateToken = async (
 export const addLiquidity = async (
   wallet: any,
   configs: any,
-  tokenAmountA: number, // UI: token supply
-  tokenAmountB: number // UI: liquidity
+  tickConfig: any
 ) => {
   if (!wallet.publicKey || !wallet.signTransaction) {
     throw new Error("Wallet not connected or cannot sign");
@@ -258,16 +291,19 @@ export const addLiquidity = async (
     tokenBPK, // ordered B mint
     tokenVaultA,
     tokenVaultB,
-    tickArrayLower,
-    tickArrayUpper,
     launchtokenStore,
     INITIAL_SQRT_PRICE,
-    tickLowerIndex,
-    tickUpperIndex,
     noFlip,
+    tokenAmountAU64,
+    tokenAmountBU64,
+    tokenAmount0U64,
+    tokenAmount1U64,
   } = configs;
 
-  //? Dynamic import
+  const { tickArrayLowerPDA, tickArrayUpperPDA, newTickLower, newTickUpper } =
+    tickConfig;
+
+  // 🔹 Dynamic import of whirlpools-core (WASM safe)
   let core: any;
   try {
     core = await import("@orca-so/whirlpools-core");
@@ -276,9 +312,7 @@ export const addLiquidity = async (
     throw new Error("Failed to initialize Orca whirlpools core (WASM).");
   }
 
-  // now call the functions from core
-  const increaseLiquidityQuoteA = core.increaseLiquidityQuoteA;
-  const increaseLiquidityQuoteB = core.increaseLiquidityQuoteB;
+  const { increaseLiquidityQuoteA, increaseLiquidityQuoteB } = core;
 
   if (typeof increaseLiquidityQuoteA !== "function") {
     throw new Error(
@@ -291,39 +325,27 @@ export const addLiquidity = async (
     );
   }
 
-  // 1) Map UI inputs into ordered A/B amounts
-  const amountAUsed = noFlip ? tokenAmountA : tokenAmountB;
-  const amountBUsed = noFlip ? tokenAmountB : tokenAmountA;
-
-  // 2) Scale to u64 (9 decimals)
-  const scaledAmountA = BigInt(
-    new Decimal(amountAUsed.toString()).mul(new Decimal(10).pow(9)).toString()
-  );
-  const scaledAmountB = BigInt(
-    new Decimal(amountBUsed.toString()).mul(new Decimal(10).pow(9)).toString()
-  );
-
-  // 3) Quote using ordered amounts
+  // 3) Quote using ordered amounts from configs (A/B already mapped there)
   const quoteA = increaseLiquidityQuoteA(
-    scaledAmountA,
+    BigInt(Decimal(tokenAmountAU64).mul(new Decimal(10).pow(9)).toString()),
     0,
     BigInt(INITIAL_SQRT_PRICE.toString()),
-    tickLowerIndex,
-    tickUpperIndex
+    newTickLower,
+    newTickUpper
   );
 
   const quoteB = increaseLiquidityQuoteB(
-    scaledAmountB,
+    BigInt(Decimal(tokenAmountBU64).mul(new Decimal(10).pow(9)).toString()),
     0,
     BigInt(INITIAL_SQRT_PRICE.toString()),
-    tickLowerIndex,
-    tickUpperIndex
+    newTickLower,
+    newTickUpper
   );
 
-  // 4) Pick the smaller liquidityDelta, same as test
+  // 4) Pick the smaller liquidityDelta
   const useA = quoteA.liquidityDelta < quoteB.liquidityDelta;
   const liquidityDelta = useA ? quoteA.liquidityDelta : quoteB.liquidityDelta;
-  
+
   // 5) Position accounts
   const positionMint = anchor.web3.Keypair.generate();
   const [position] = PublicKey.findProgramAddressSync(
@@ -369,8 +391,8 @@ export const addLiquidity = async (
       funder: wallet.publicKey,
       tokenVaultA: vaultA,
       tokenVaultB: vaultB,
-      tickArrayLower,
-      tickArrayUpper,
+      tickArrayLower: tickArrayLowerPDA.publicKey,
+      tickArrayUpper: tickArrayUpperPDA.publicKey,
       positionOwner: positionOwnerPda,
       position,
       positionMint: positionMint.publicKey,
@@ -413,7 +435,6 @@ export const addLiquidity = async (
       "confirmed"
     );
 
-    // console.log("✅ addLiquidity tx:", sig);
     return {
       signature: sig,
       positionMint,

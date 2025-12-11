@@ -17,10 +17,6 @@ import {
 
 export const METADATA_UPDATE_AUTH_ADDRESS = address(METADATA_UPDATE_AUTH_VALUE);
 
-export const SPLASH_POOL_TICK_SPACING = 32896;
-export const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-export const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/gif"];
-
 // ✅ Tokens
 export const TOKEN_X_MINT = new PublicKey(VNX_TOKEN_MINT as string); // VNX
 export const TOKEN_Y_MINT = new PublicKey(GOLDC_TOKEN_MINT as string); // GoldC

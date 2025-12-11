@@ -1,5 +1,5 @@
 {
-  "address": "HZCtQt5eJDuaiWakuM1KVGfmefsyxjLvmxVaXmp9Hnny",
+  "address": "DDZZWyq9ur4iszNCREty7f2PZBceVNA2vpPXtCnH3kob",
   "metadata": {
     "name": "deaura",
     "version": "0.1.0",
@@ -1142,7 +1142,7 @@
         {
           "name": "goldc_mint",
           "writable": true,
-          "address": "75Q4sb6VtoZcnAaEiykLSZ1pPwhDr3GnUn9VTwEnrXqv"
+          "address": "2MwxMWon2z4RxAq98pt9uNxLpWCDY2QCeeqtUS4JWHC7"
         },
         {
           "name": "payer_goldc_token_account",
@@ -1332,7 +1332,7 @@
         {
           "name": "vnx_vault",
           "writable": true,
-          "address": "9A5wa9eT2BZE6BhQmarSKa47iiREkT8PUSPSBUAdHmox"
+          "address": "BsgqmFnmncCMRrnGaKaCAXEG3DiApLX2tW2ui3KmXTNd"
         },
         {
           "name": "user_data",
@@ -1378,6 +1378,85 @@
         {
           "name": "amount",
           "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "init_tick_array",
+      "discriminator": [
+        88,
+        230,
+        135,
+        70,
+        171,
+        38,
+        191,
+        183
+      ],
+      "accounts": [
+        {
+          "name": "whirlpool_program",
+          "address": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc"
+        },
+        {
+          "name": "launch_token_store",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  97,
+                  117,
+                  110,
+                  99,
+                  104,
+                  95,
+                  115,
+                  116,
+                  111,
+                  114,
+                  101
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "whirlpool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "whirlpool",
+          "writable": true
+        },
+        {
+          "name": "tick_array",
+          "writable": true
+        },
+        {
+          "name": "funder",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "start_tick_index",
+          "type": "i32"
+        },
+        {
+          "name": "tick_index_lower",
+          "type": "i32"
+        },
+        {
+          "name": "tick_index_upper",
+          "type": "i32"
         }
       ]
     },
@@ -1647,7 +1726,7 @@
         {
           "name": "token_mint_a",
           "writable": true,
-          "address": "75Q4sb6VtoZcnAaEiykLSZ1pPwhDr3GnUn9VTwEnrXqv"
+          "address": "2MwxMWon2z4RxAq98pt9uNxLpWCDY2QCeeqtUS4JWHC7"
         },
         {
           "name": "token_mint_b",
@@ -1714,14 +1793,6 @@
           "name": "fee_tier"
         },
         {
-          "name": "tick_array_lower",
-          "writable": true
-        },
-        {
-          "name": "tick_array_upper",
-          "writable": true
-        },
-        {
           "name": "system_program",
           "address": "11111111111111111111111111111111"
         },
@@ -1748,22 +1819,6 @@
           "type": "u128"
         },
         {
-          "name": "start_tick_index_lower",
-          "type": "i32"
-        },
-        {
-          "name": "start_tick_index_upper",
-          "type": "i32"
-        },
-        {
-          "name": "tick_index_lower",
-          "type": "i32"
-        },
-        {
-          "name": "tick_index_upper",
-          "type": "i32"
-        },
-        {
           "name": "token_name",
           "type": "string"
         },
@@ -1782,6 +1837,18 @@
         {
           "name": "total_mint_b",
           "type": "u64"
+        },
+        {
+          "name": "integrator",
+          "type": {
+            "option": "pubkey"
+          }
+        },
+        {
+          "name": "sales_rep",
+          "type": {
+            "option": "pubkey"
+          }
         }
       ]
     },
@@ -1859,7 +1926,7 @@
         {
           "name": "goldc_mint",
           "writable": true,
-          "address": "75Q4sb6VtoZcnAaEiykLSZ1pPwhDr3GnUn9VTwEnrXqv"
+          "address": "2MwxMWon2z4RxAq98pt9uNxLpWCDY2QCeeqtUS4JWHC7"
         },
         {
           "name": "payer_goldc_token_account",
@@ -2049,7 +2116,7 @@
         {
           "name": "vnx_vault",
           "writable": true,
-          "address": "9A5wa9eT2BZE6BhQmarSKa47iiREkT8PUSPSBUAdHmox"
+          "address": "BsgqmFnmncCMRrnGaKaCAXEG3DiApLX2tW2ui3KmXTNd"
         },
         {
           "name": "user_data",
@@ -2488,6 +2555,22 @@
           {
             "name": "fee_accumulated_sales_rep_b",
             "type": "u64"
+          },
+          {
+            "name": "position_owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "position",
+            "type": "pubkey"
+          },
+          {
+            "name": "position_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "position_token_account",
+            "type": "pubkey"
           },
           {
             "name": "is_liqudity_added",

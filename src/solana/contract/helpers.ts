@@ -1,4 +1,9 @@
-import { Connection, PublicKey } from "@solana/web3.js";
+import {
+  Connection,
+  PublicKey,
+  SystemProgram,
+  Transaction,
+} from "@solana/web3.js";
 import {
   ORCA_WHIRLPOOL_PROGRAM_ID,
   TOKEN_METADATA_PROGRAM_ID,
@@ -12,16 +17,18 @@ import Decimal from "decimal.js";
 import { orderMints } from "@orca-so/whirlpools";
 import { address } from "@solana/kit";
 
+import { PDAUtil, WhirlpoolContext, TickUtil } from "@orca-so/whirlpools-sdk";
+
 export const getLaunchConfigs = async (
   rpcurl: string,
   wallet: any,
   tokenAmountB: number, // liquidity
-  tokenAmountA: number, // supply,
+  tokenAmountA: number, // supply
   tickSpacing: number,
   feeTierAddress: string
 ) => {
   const GOLDC_MINT = Buffer.from("goldc_mint");
-  const TICK_SPACING = tickSpacing; //128;
+  const TICK_SPACING = tickSpacing;
   const FEE_TIER_INDEX = 1024 + TICK_SPACING;
   const FEE_TIER_PUBKEY = new PublicKey(feeTierAddress);
 
@@ -29,19 +36,19 @@ export const getLaunchConfigs = async (
     throw new Error("Wallet not connected or cannot sign");
   }
 
-  //? Dynamic import
+  // 🔹 Dynamic WASM import (must stay here in SDK)
   let core: any;
   try {
     core = await import("@orca-so/whirlpools-core");
-  } catch (e) {
-    console.error("❌ Failed to load @orca-so/whirlpools-core:", e);
+  } catch {
     throw new Error("Failed to initialize Orca whirlpools core (WASM).");
   }
 
-  // now call the functions from core
-  const priceToSqrtPrice = core.priceToSqrtPrice;
-  const getTickArrayStartTickIndex = core.getTickArrayStartTickIndex;
-  const getFullRangeTickIndexes = core.getFullRangeTickIndexes;
+  const {
+    priceToSqrtPrice,
+    getTickArrayStartTickIndex,
+    getFullRangeTickIndexes,
+  } = core;
 
   if (typeof priceToSqrtPrice !== "function") {
     throw new Error(
@@ -49,7 +56,7 @@ export const getLaunchConfigs = async (
     );
   }
 
-  // Anchor provider
+  // 🔹 Anchor Provider + Program
   const connection = new Connection(
     rpcurl || "https://api.mainnet-beta.solana.com",
     "confirmed"
@@ -60,38 +67,44 @@ export const getLaunchConfigs = async (
   anchor.setProvider(provider);
   const program = new anchor.Program(IDL as anchor.Idl, provider);
 
-  // GoldC Mint (PDA under your program)
+  // 🔹 GoldC Mint PDA (unchanged)
   const [goldcMintPda] = PublicKey.findProgramAddressSync(
     [GOLDC_MINT],
     program.programId
   );
 
-  // New token mint (to be graduated/launched)
+  // 🔹 Token mint to be launched
   const tokenMintB = Keypair.generate();
 
-  // 🟢 Order mints (Orca always expects ordered mints)
+  // 🟢 Ensure correct mint ordering for Orca
   const [tokenAMint, tokenBMint] = orderMints(
     address(goldcMintPda.toBase58()),
     address(tokenMintB.publicKey.toBase58())
   );
+
   const tokenAPK = new PublicKey(tokenAMint);
   const tokenBPK = new PublicKey(tokenBMint);
+
   const noFlip = tokenAMint === goldcMintPda.toBase58();
 
-  // Map amounts according to A/B order
-  const [tokenAmountAU64, tokenAmountBU64] = noFlip
-    ? [BigInt(tokenAmountA), BigInt(tokenAmountB)]
-    : [BigInt(tokenAmountB), BigInt(tokenAmountA)];
-  const [decimalsA, decimalsB] = [9, 9]; // both 9 decimals
+  // 🟢 Amount mapping according to mint orientation
+  const tokenAmount0U64 = BigInt(tokenAmountB);
+  const tokenAmount1U64 = BigInt(tokenAmountA);
 
-  // 🟢 Price = tokenB / tokenA
+  const [tokenAmountAU64, tokenAmountBU64] = noFlip
+    ? [tokenAmount0U64, tokenAmount1U64]
+    : [tokenAmount1U64, tokenAmount0U64];
+
+  const [decimalsA, decimalsB] = noFlip ? [9, 9] : [9, 9];
+
+  // 🟢 Price = B / A
   const initialPrice = new Decimal(tokenAmountBU64.toString()).div(
     new Decimal(tokenAmountAU64.toString())
   );
   const INITIAL_SQRT_PRICE = new BN(
     priceToSqrtPrice(initialPrice.toNumber(), decimalsA, decimalsB).toString()
   );
-  // return INITIAL_SQRT_PRICE;
+
   // 🟢 Full range ticks
   const { tickLowerIndex, tickUpperIndex } =
     getFullRangeTickIndexes(TICK_SPACING);
@@ -105,16 +118,27 @@ export const getLaunchConfigs = async (
     TICK_SPACING
   );
 
-  // Whirlpool PDA
-  const whirlpool = getWhirlpoolPda(
-    ORCA_WHIRLPOOL_PROGRAM_ID,
-    WHIRLPOOLS_CONFIG_PUBKEY,
-    tokenAPK,
-    tokenBPK,
-    TICK_SPACING
-  );
+  // 🟢 Updated whirlpool mint ordering logic
+  let whirlpool: PublicKey;
+  if (goldcMintPda >= tokenMintB.publicKey) {
+    whirlpool = getWhirlpoolPda(
+      ORCA_WHIRLPOOL_PROGRAM_ID,
+      WHIRLPOOLS_CONFIG_PUBKEY,
+      tokenMintB.publicKey,
+      goldcMintPda,
+      TICK_SPACING
+    );
+  } else {
+    whirlpool = getWhirlpoolPda(
+      ORCA_WHIRLPOOL_PROGRAM_ID,
+      WHIRLPOOLS_CONFIG_PUBKEY,
+      goldcMintPda,
+      tokenMintB.publicKey,
+      TICK_SPACING
+    );
+  }
 
-  // Tick arrays
+  // 🔹 Tick arrays
   const tickArrayLower = getTickArrayPda(
     whirlpool,
     START_TA_LOWER,
@@ -126,25 +150,22 @@ export const getLaunchConfigs = async (
     ORCA_WHIRLPOOL_PROGRAM_ID
   );
 
-  // Token badges
+  // 🔹 Token badges
   const tokenBadge0 = deriveTokenBadge(WHIRLPOOLS_CONFIG_PUBKEY, tokenAPK);
   const tokenBadge1 = deriveTokenBadge(WHIRLPOOLS_CONFIG_PUBKEY, tokenBPK);
   const [tokenBadgeA, tokenBadgeB] = noFlip
     ? [tokenBadge0, tokenBadge1]
     : [tokenBadge1, tokenBadge0];
 
-  // Vaults
+  // 🔹 Vaults (same)
   const tokenVaultA = Keypair.generate();
   const tokenVaultB = Keypair.generate();
 
-  // Metadata + Launch store
+  // 🔹 Metadata + Store + Oracle
   const metadataAccountB = deriveMetadataPda(tokenMintB.publicKey);
   const launchtokenStore = deriveLaunchStore(whirlpool, program.programId);
-
-  // Oracle
   const [oraclePda] = deriveOraclePda(whirlpool, ORCA_WHIRLPOOL_PROGRAM_ID);
 
-  // Vault authority
   const [vaultAuthority] = PublicKey.findProgramAddressSync(
     [Buffer.from("vault_authority")],
     program.programId
@@ -155,6 +176,7 @@ export const getLaunchConfigs = async (
     program,
     wallet,
     connection,
+
     // Constants
     WHIRLPOOLS_CONFIG_PUBKEY,
     FEE_TIER_PUBKEY,
@@ -165,7 +187,8 @@ export const getLaunchConfigs = async (
     START_TA_UPPER,
     tickLowerIndex,
     tickUpperIndex,
-    // Token mints
+
+    // Mints & PDAs
     goldcMintPda,
     tokenMintB,
     tokenAPK,
@@ -183,7 +206,155 @@ export const getLaunchConfigs = async (
     launchtokenStore,
     oraclePda,
     vaultAuthority,
+
+    // Amounts
+    tokenAmountAU64,
+    tokenAmountBU64,
+    tokenAmount0U64,
+    tokenAmount1U64,
   };
+};
+
+export const getTicksConfigs = async (
+  configs: any,
+  poolID: PublicKey,
+  wallet: any,
+  tickSpacing: number
+): Promise<{
+  initialized: boolean;
+  tickArrayLowerPDA: any;
+  tickArrayUpperPDA: any;
+  newTickLower: number;
+  newTickUpper: number;
+  signature?: string | null;
+  error: any;
+}> => {
+  try {
+  
+    const whirlpool_ctx = WhirlpoolContext.withProvider(configs.provider);
+    const fetcher = whirlpool_ctx.fetcher;
+
+    const whirlpool: any = await fetcher.getPool(poolID);
+    const currentTick = whirlpool.tickCurrentIndex;
+
+    const rangeSize = tickSpacing * 256;
+    const rawTickLower = currentTick - rangeSize;
+    const rawTickUpper = currentTick + rangeSize;
+
+    const newTickLower = Math.floor(rawTickLower / tickSpacing) * tickSpacing;
+    const newTickUpper = Math.ceil(rawTickUpper / tickSpacing) * tickSpacing;
+
+    const tickArrayLowerStartIndex = TickUtil.getStartTickIndex(
+      newTickLower,
+      tickSpacing,
+      0
+    );
+    const tickArrayUpperStartIndex = TickUtil.getStartTickIndex(
+      newTickUpper,
+      tickSpacing,
+      0
+    );
+
+    const tickArrayLowerPDA = PDAUtil.getTickArray(
+      ORCA_WHIRLPOOL_PROGRAM_ID,
+      poolID,
+      tickArrayLowerStartIndex
+    );
+    const tickArrayUpperPDA = PDAUtil.getTickArray(
+      ORCA_WHIRLPOOL_PROGRAM_ID,
+      poolID,
+      tickArrayUpperStartIndex
+    );
+
+    // Check which tick arrays need to be initialized
+    const tickArraysToInit = [];
+    const tickArrayPDAs = [
+      { pda: tickArrayLowerPDA, startIndex: tickArrayLowerStartIndex },
+      { pda: tickArrayUpperPDA, startIndex: tickArrayUpperStartIndex },
+    ];
+
+    for (const { pda, startIndex } of tickArrayPDAs) {
+      try {
+        const exists = await configs.connection.getAccountInfo(pda.publicKey);
+        if (!exists) {
+          tickArraysToInit.push({ pda, startIndex });
+        }
+      } catch (error) {
+        tickArraysToInit.push({ pda, startIndex });
+      }
+    }
+
+    // No init required
+    if (tickArraysToInit.length === 0) {
+      return {
+        signature: null,
+        initialized: false,
+        tickArrayLowerPDA,
+        tickArrayUpperPDA,
+        newTickLower,
+        newTickUpper,
+        error: null,
+      };
+    }
+
+    // Build IX list with correct startIndex for each tick array
+    const ixList = [];
+
+    for (const { pda, startIndex } of tickArraysToInit) {
+      const ix = await configs.program.methods
+        .initTickArray(startIndex, newTickLower, newTickUpper)
+        .accounts({
+          whirlpoolProgram: ORCA_WHIRLPOOL_PROGRAM_ID,
+          whirlpool: poolID,
+          funder: wallet.publicKey,
+          tickArray: pda.publicKey,
+          systemProgram: SystemProgram.programId,
+          launchTokenStore: configs.launchtokenStore,
+        })
+        .instruction();
+
+      ixList.push(ix);
+    }
+
+    const tx = new Transaction().add(...ixList);
+    tx.feePayer = wallet.publicKey;
+
+    const { blockhash, lastValidBlockHeight } =
+      await configs.connection.getLatestBlockhash("confirmed");
+
+    tx.recentBlockhash = blockhash;
+
+    const signature = await wallet.sendTransaction(tx, configs.connection);
+
+    await configs.connection.confirmTransaction(
+      { signature, blockhash, lastValidBlockHeight },
+      "confirmed"
+    );
+
+    return {
+      signature,
+      initialized: true,
+      tickArrayLowerPDA,
+      tickArrayUpperPDA,
+      newTickLower,
+      newTickUpper,
+      error: null,
+    };
+  } catch (e: any) {
+    const logs: string[] | undefined = e?.logs ?? e?.getLogs?.();
+    console.error("❌ getTicksConfigs failed:", e?.message || e);
+    if (logs) console.error("Program Logs:\n" + logs.join("\n"));
+
+    return {
+      initialized: false,
+      signature: null,
+      tickArrayLowerPDA: undefined,
+      tickArrayUpperPDA: undefined,
+      newTickLower: 0,
+      newTickUpper: 0,
+      error: e,
+    };
+  }
 };
 
 function leU16(n: number) {
@@ -203,7 +374,7 @@ export function getWhirlpoolPda(
       config.toBuffer(),
       mintA.toBuffer(),
       mintB.toBuffer(),
-      leU16(tick_spacing), 
+      leU16(tick_spacing),
     ],
     programId
   );

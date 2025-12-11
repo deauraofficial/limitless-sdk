@@ -1,5 +1,11 @@
+/**
+ * Program IDL in camelCase format in order to be used in JS/TS.
+ *
+ * Note that this is only a type helper and is not the actual IDL. The original
+ * IDL can be found at `target/idl/deaura.json`.
+ */
 export type Deaura = {
-  address: "76i4pkGyKS49BiMBMxwoZ2ouEj4WSX9NJUPumKsF6kEC";
+  address: "DDZZWyq9ur4iszNCREty7f2PZBceVNA2vpPXtCnH3kob";
   metadata: {
     name: "deaura";
     version: "0.1.0";
@@ -1089,7 +1095,7 @@ export type Deaura = {
         {
           name: "goldcMint";
           writable: true;
-          address: "4BKADB5WHuH22VVXtpxYyUsL5Hq9jXeoML7sUCnkPbWd";
+          address: "2MwxMWon2z4RxAq98pt9uNxLpWCDY2QCeeqtUS4JWHC7";
         },
         {
           name: "payerGoldcTokenAccount";
@@ -1279,7 +1285,7 @@ export type Deaura = {
         {
           name: "vnxVault";
           writable: true;
-          address: "CcPTTyqt2rvV63ygHfz487QZ5vViXofH5PPGTYWcCsXQ";
+          address: "BsgqmFnmncCMRrnGaKaCAXEG3DiApLX2tW2ui3KmXTNd";
         },
         {
           name: "userData";
@@ -1314,6 +1320,76 @@ export type Deaura = {
         {
           name: "amount";
           type: "u64";
+        },
+      ];
+    },
+    {
+      name: "initTickArray";
+      discriminator: [88, 230, 135, 70, 171, 38, 191, 183];
+      accounts: [
+        {
+          name: "whirlpoolProgram";
+          address: "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc";
+        },
+        {
+          name: "launchTokenStore";
+          writable: true;
+          pda: {
+            seeds: [
+              {
+                kind: "const";
+                value: [
+                  108,
+                  97,
+                  117,
+                  110,
+                  99,
+                  104,
+                  95,
+                  115,
+                  116,
+                  111,
+                  114,
+                  101,
+                ];
+              },
+              {
+                kind: "account";
+                path: "whirlpool";
+              },
+            ];
+          };
+        },
+        {
+          name: "whirlpool";
+          writable: true;
+        },
+        {
+          name: "tickArray";
+          writable: true;
+        },
+        {
+          name: "funder";
+          writable: true;
+          signer: true;
+        },
+        {
+          name: "systemProgram";
+          address: "11111111111111111111111111111111";
+        },
+      ];
+      args: [
+        {
+          name: "startTickIndex";
+          type: "i32";
+        },
+        {
+          name: "tickIndexLower";
+          type: "i32";
+        },
+        {
+          name: "tickIndexUpper";
+          type: "i32";
         },
       ];
     },
@@ -1522,7 +1598,7 @@ export type Deaura = {
         {
           name: "tokenMintA";
           writable: true;
-          address: "4BKADB5WHuH22VVXtpxYyUsL5Hq9jXeoML7sUCnkPbWd";
+          address: "2MwxMWon2z4RxAq98pt9uNxLpWCDY2QCeeqtUS4JWHC7";
         },
         {
           name: "tokenMintB";
@@ -1580,14 +1656,6 @@ export type Deaura = {
           name: "feeTier";
         },
         {
-          name: "tickArrayLower";
-          writable: true;
-        },
-        {
-          name: "tickArrayUpper";
-          writable: true;
-        },
-        {
           name: "systemProgram";
           address: "11111111111111111111111111111111";
         },
@@ -1614,22 +1682,6 @@ export type Deaura = {
           type: "u128";
         },
         {
-          name: "startTickIndexLower";
-          type: "i32";
-        },
-        {
-          name: "startTickIndexUpper";
-          type: "i32";
-        },
-        {
-          name: "tickIndexLower";
-          type: "i32";
-        },
-        {
-          name: "tickIndexUpper";
-          type: "i32";
-        },
-        {
           name: "tokenName";
           type: "string";
         },
@@ -1648,6 +1700,18 @@ export type Deaura = {
         {
           name: "totalMintB";
           type: "u64";
+        },
+        {
+          name: "integrator";
+          type: {
+            option: "pubkey";
+          };
+        },
+        {
+          name: "salesRep";
+          type: {
+            option: "pubkey";
+          };
         },
       ];
     },
@@ -1703,7 +1767,7 @@ export type Deaura = {
         {
           name: "goldcMint";
           writable: true;
-          address: "4BKADB5WHuH22VVXtpxYyUsL5Hq9jXeoML7sUCnkPbWd";
+          address: "2MwxMWon2z4RxAq98pt9uNxLpWCDY2QCeeqtUS4JWHC7";
         },
         {
           name: "payerGoldcTokenAccount";
@@ -1893,7 +1957,7 @@ export type Deaura = {
         {
           name: "vnxVault";
           writable: true;
-          address: "CcPTTyqt2rvV63ygHfz487QZ5vViXofH5PPGTYWcCsXQ";
+          address: "BsgqmFnmncCMRrnGaKaCAXEG3DiApLX2tW2ui3KmXTNd";
         },
         {
           name: "userData";
@@ -2227,6 +2291,22 @@ export type Deaura = {
           {
             name: "feeAccumulatedSalesRepB";
             type: "u64";
+          },
+          {
+            name: "positionOwner";
+            type: "pubkey";
+          },
+          {
+            name: "position";
+            type: "pubkey";
+          },
+          {
+            name: "positionMint";
+            type: "pubkey";
+          },
+          {
+            name: "positionTokenAccount";
+            type: "pubkey";
           },
           {
             name: "isLiqudityAdded";
